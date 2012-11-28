@@ -20,6 +20,10 @@ app.get('/', function(req, res){
 
 app.use(express.bodyParser());
 app.use(express.static(__dirname + '/../'));
+if(!module.parent) {
+  app.listen(3000);
+  console.log('Test server listening on port 3000');
+} else {
+  module.exports = app;
+}
 
-app.listen(3000);
-console.log('Test server listening on port 3000');

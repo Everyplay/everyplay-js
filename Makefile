@@ -18,7 +18,7 @@ lib-cov:
 	jscoverage lib lib-cov
 
 everyplay.js: components
-	@./node_modules/.bin/component build --standalone everyplay
+	@./node_modules/.bin/component build --standalone EP
 	@cp build/build.js everyplay.js
 
 everyplay.min.js: everyplay.js

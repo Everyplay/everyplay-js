@@ -1882,7 +1882,7 @@ require.alias("component-object/index.js", "everyplay-js/deps/object/index.js");
 
 require.alias("everyplay-js/lib/sdk.js", "everyplay-js/index.js");
   if ("undefined" == typeof module) {
-    window.everyplay = require("everyplay-js");
+    window.EP = require("everyplay-js");
   } else {
     module.exports = require("everyplay-js");
   }
