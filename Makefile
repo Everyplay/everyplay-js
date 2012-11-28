@@ -18,8 +18,8 @@ lib-cov:
 	jscoverage lib lib-cov
 
 everyplay.js: components
-	component build --standalone everyplay
-	cp build/build.js everyplay.js
+	@./node_modules/.bin/component build --standalone everyplay
+	@cp build/build.js everyplay.js
 
 everyplay.min.js: everyplay.js
 	./node_modules/.bin/uglifyjs -o everyplay.min.js everyplay.js
@@ -35,10 +35,10 @@ test-docs:
 		> docs/test.html
 
 build: components
-	@component build --dev
+	@./node_modules/.bin/component build --dev
 
 components: component.json
-	@component install --dev
+	@./node_modules/.bin/component install --dev
 
 clean:
 	rm -fr build components everyplay.js everyplay.min.js
