@@ -1,0 +1,24 @@
+{
+  "name": "everyplay-js",
+  "repo": "Everyplay/everyplay-js",
+  "description": "Everyplay javascript SDK",
+  "version": "0.0.1",
+  "keywords": [],
+  "dependencies": {
+    "component/url": "*",
+    "visionmedia/superagent": "*",
+    "component/querystring": "*",
+    "component/inherit": "*",
+    "yields/merge": "*",
+    "component/object": "*"
+  },
+  "development": {},
+  "license": "MIT",
+  "scripts": [
+    "lib/sdk.js",
+    "lib/api.js",
+    "lib/dialog.js",
+    "lib/auth.js"
+  ],
+  "main": "lib/sdk.js"
+}
