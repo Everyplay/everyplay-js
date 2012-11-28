@@ -19,9 +19,10 @@ lib-cov:
 
 everyplay.js: components
 	component build --standalone everyplay
+	cp build/build.js everyplay.js
 
 everyplay.min.js: everyplay.js
-	uglifyjs -o everyplay.min.js build/build.js
+	./node_modules/.bin/uglifyjs -o everyplay.min.js everyplay.js
 
 test-server:
 	@node test/server
@@ -33,7 +34,7 @@ test-docs:
 		| cat docs/head.html - docs/tail.html \
 		> docs/test.html
 
-build: components index.js
+build: components
 	@component build --dev
 
 components: component.json
