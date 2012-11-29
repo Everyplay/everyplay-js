@@ -1524,7 +1524,16 @@ exports.del = function(path, data, callback) {
 
 exports.connect = function(callback) {
   sdkSingleton.connect(callback);
-}
+};
+
+exports.dialog = function(name, options, callback) {
+  return Dialog.dialog(name, options, callback);
+};
+
+exports.oEmbed = function() {
+
+};
+
 
 exports.Dialog = Dialog;
 
@@ -1870,6 +1879,23 @@ AuthPrototype.connected = function() {
 }
 
 module.exports = Auth;
+});
+require.register("everyplay-js/lib/widget.js", function(module, exports, require){
+var Widget = function(options) {
+
+};
+
+WidgetPrototype = Widget.prototype;
+
+module.exports = Widget;
+
+});
+require.register("everyplay-js/lib/oembed.js", function(module, exports, require){
+
+
+var oEmbed = function() {
+  
+}
 });
 require.alias("component-url/index.js", "everyplay-js/deps/url/index.js");
 

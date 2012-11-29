@@ -18,7 +18,9 @@
     "lib/sdk.js",
     "lib/api.js",
     "lib/dialog.js",
-    "lib/auth.js"
+    "lib/auth.js",
+    "lib/widget.js",
+    "lib/oembed.js"
   ],
   "main": "lib/sdk.js"
 }
