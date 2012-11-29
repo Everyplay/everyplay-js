@@ -7,6 +7,21 @@
     <script src="test.js"></script>
     <script src="test.api.js"></script>
     <script src="test.auth.js"></script>
+    <script>
+        function authorize() {
+            var everyplay = EP.initialize({
+                client_id:"0fc6fb0b2a2ec2428c11d544af19f918b1c57a18"
+            });
+            $('.authorize-api').attr('disabled', "no");
+            everyplay.connect(function(err, token) {
+                console.log("connected");
+            });
+        }
+        $(function() {
+            $('.authorize').click(authorize);
+        });
+
+    </script>
     <style>
         body {
             font: 14px "helvetica neue", helvetica, arial, sans-serif;
@@ -48,20 +63,14 @@
     </style>
 </head>
 <body>
+<div class="listmenu">
+    <ul>
+        <li><button class="authorize">Authorize user</button></li>
+        <li><button class="authorize-api" disabled="yes">Run .get/.put/.post tests</button></li>
+        <li><button class="integration" disabled="yes">Run API integration tests</button></li>
+    </ul>
+</div>
 <ul id="tests"></ul>
 <div id="test-results"></div>
-<div id="dom">
-    <p>foo</p>
-    <p>bar</p>
-    <p>baz</p>
-    <ul id="classes" class="foo bar baz"></ul>
-    <form method="post" action="/user" id="login">
-        <p><input name="user[name]" type="text" name="tj" /></p>
-        <p><input name="user[pass]" type="password" value="tobi" /></p>
-        <p class="buttons">
-            <input name="op" type="submit" value="Login" />
-        </p>
-    </form>
-</div>
 </body>
 </html>

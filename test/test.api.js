@@ -2,7 +2,7 @@
 
 
 test('Everyplay instance', function(){
-  var instance = everyplay.initialize({
+  var instance = EP.initialize({
       client_id:"1"
     , redirect_uri: "http://localhost:4501"
   });
@@ -10,7 +10,7 @@ test('Everyplay instance', function(){
 });
 
 test('everyplay.get simple GET', function(next){
-  var instance = everyplay.initialize({
+  var instance = EP.initialize({
       client_id:"1"
     , redirect_uri: "http://localhost:4501"
   });

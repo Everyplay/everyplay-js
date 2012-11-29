@@ -1447,6 +1447,8 @@ var API = require('./api');
 var Auth = require('./auth');
 var Dialog = require('./dialog');
 
+Dialog.handle();
+
 var SDK = function(options) {
   options.base = options.base || "https://api.everyplay.com";
   options.site = options.site || "https://everyplay.com";
@@ -1486,6 +1488,10 @@ SDKPrototype.accessToken = function(token) {
 
 SDKPrototype.connect = function(cb) {
   return this.auth.connect(cb);
+}
+
+SDKPrototype.accessToken = function(token) {
+  return this.auth.accessToken(token);
 }
 
 // everyplay can be used in a singleton manner by using the exports directly or using the SDK instance.
@@ -1653,14 +1659,14 @@ function getDialogFromWindow(window) {
     loc.hash = qs.parse(loc.hash.substring(1));
   }
   var id = loc.query.state || loc.hash.state;
-  if(this.isDialogId(id)) {
+  if(isDialogId(id)) {
     return id;
   }
   return null;
 }
 
 function isDialogId(id) {
-  (id || "").match (new RegExp("^"+PREFIX));
+  return (id || "").match (new RegExp("^"+PREFIX));
 }
 
 var Dialog = function(options, sdk) {
@@ -1703,7 +1709,7 @@ DialogPrototype.paramsFromWindow = function(window) {
  * @param window
  */
 DialogPrototype.handleReturn = function(window) {
-  var params = this.paramsFromWindow();
+  var params = this.paramsFromWindow(this.dialogOptions.window);
   if(this.dialogOptions.window && !this.dialogOptions.retain) {
     this.dialogOptions.window.close();
   }
@@ -1723,6 +1729,7 @@ DialogPrototype.url = function(path) {
       query[key] = self.dialogOptions[key];
     }
   });
+  query.state = this.id;
   path += '?'+qs.stringify(query);
   return path;
 };
@@ -1747,9 +1754,6 @@ var ConnectDialog = function(options, sdk) {
 
 ConnectDialogPrototype = ConnectDialog.prototype;
 
-ConnectDialogPrototype.buildURL = function() {
-
-}
 
 inherit(ConnectDialog, Dialog);
 
@@ -1771,6 +1775,7 @@ exports.dialog = function(sdk, name, options, callback) {
  */
 exports.handle = function() {
   var id = getDialogFromWindow(window);
+
   if(id) {
     var ios = (navigator.userAgent.match(/OS 5(_\d)+ like Mac OS X/i));
     if(ios) {
@@ -1845,10 +1850,13 @@ AuthPrototype.connect = function(cb) {
   if(this.connected()) {
     return cb(null, this.accessToken());
   }
-  this.dialog = Dialog.dialog(this.sdk, 'Connect', this.dialogOptions, function(err, params) {
-    if(err || params.error) {
-      err = err || new Error("OAuth2 error:"+params.error+" description:"+params.error_description);
+  this.dialog = Dialog.dialog(this.sdk, 'Connect', this.dialogOptions, function(params) {
+    var err;
+
+    if(params.error) {
+      err = new Error("OAuth2 error:"+params.error+" description:"+params.error_description);
     }
+
     if(params.access_token) {
       self.accessToken(params.access_token);
     }

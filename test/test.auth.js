@@ -1,6 +1,6 @@
 
 test('everyplay.connect with token', function(next) {
-  var instance = everyplay.initialize({
+  var instance = EP.initialize({
       client_id:"88d6bf2ca69dc1366d71557e01dae536f0853db7"
     , site: "https://api.everyplay.com"
     , base: "https://api.everyplay.com:3000"
@@ -15,7 +15,7 @@ test('everyplay.connect with token', function(next) {
 });
 
 test('everyplay.connect without token', function(next) {
-  var instance = everyplay.initialize({
+  var instance = EP.initialize({
       client_id:"88d6bf2ca69dc1366d71557e01dae536f0853db7"
     , site: "http://localhost:4501"
     , base: "http://localhost:3000"
