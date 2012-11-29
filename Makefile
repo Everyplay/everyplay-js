@@ -22,7 +22,7 @@ everyplay.js: components
 	@cp build/build.js everyplay.js
 
 everyplay.min.js: everyplay.js
-	./node_modules/.bin/uglifyjs -o everyplay.min.js everyplay.js
+	./node_modules/.bin/uglifyjs -m -o everyplay.min.js everyplay.js
 
 test-server:
 	@node test/server
