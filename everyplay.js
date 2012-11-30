@@ -250,156 +250,6 @@ exports.isCrossDomain = function(url){
     || url.protocol !== location.protocol;
 };
 });
-require.register("component-emitter/index.js", function(module, exports, require){
-
-/**
- * Expose `Emitter`.
- */
-
-module.exports = Emitter;
-
-/**
- * Initialize a new `Emitter`.
- * 
- * @api public
- */
-
-function Emitter(obj) {
-  if (obj) return mixin(obj);
-};
-
-/**
- * Mixin the emitter properties.
- *
- * @param {Object} obj
- * @return {Object}
- * @api private
- */
-
-function mixin(obj) {
-  for (var key in Emitter.prototype) {
-    obj[key] = Emitter.prototype[key];
-  }
-  return obj;
-}
-
-/**
- * Listen on the given `event` with `fn`.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.on = function(event, fn){
-  this._callbacks = this._callbacks || {};
-  (this._callbacks[event] = this._callbacks[event] || [])
-    .push(fn);
-  return this;
-};
-
-/**
- * Adds an `event` listener that will be invoked a single
- * time then automatically removed.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.once = function(event, fn){
-  var self = this;
-  this._callbacks = this._callbacks || {};
-
-  function on() {
-    self.off(event, on);
-    fn.apply(this, arguments);
-  }
-
-  fn._off = on;
-  this.on(event, on);
-  return this;
-};
-
-/**
- * Remove the given callback for `event` or all
- * registered callbacks.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.off = function(event, fn){
-  this._callbacks = this._callbacks || {};
-  var callbacks = this._callbacks[event];
-  if (!callbacks) return this;
-
-  // remove all handlers
-  if (1 == arguments.length) {
-    delete this._callbacks[event];
-    return this;
-  }
-
-  // remove specific handler
-  var i = callbacks.indexOf(fn._off || fn);
-  if (~i) callbacks.splice(i, 1);
-  return this;
-};
-
-/**
- * Emit `event` with the given args.
- *
- * @param {String} event
- * @param {Mixed} ...
- * @return {Emitter} 
- */
-
-Emitter.prototype.emit = function(event){
-  this._callbacks = this._callbacks || {};
-  var args = [].slice.call(arguments, 1)
-    , callbacks = this._callbacks[event];
-
-  if (callbacks) {
-    callbacks = callbacks.slice(0);
-    for (var i = 0, len = callbacks.length; i < len; ++i) {
-      callbacks[i].apply(this, args);
-    }
-  }
-
-  return this;
-};
-
-/**
- * Return array of callbacks for `event`.
- *
- * @param {String} event
- * @return {Array}
- * @api public
- */
-
-Emitter.prototype.listeners = function(event){
-  this._callbacks = this._callbacks || {};
-  return this._callbacks[event] || [];
-};
-
-/**
- * Check if this emitter has `event` handlers.
- *
- * @param {String} event
- * @return {Boolean}
- * @api public
- */
-
-Emitter.prototype.hasListeners = function(event){
-  return !! this.listeners(event).length;
-};
-
-
-});
 require.register("visionmedia-superagent/lib/client.js", function(module, exports, require){
 
 /**
@@ -1322,6 +1172,156 @@ exports.stringify = function(obj){
   return pairs.join('&');
 };
 });
+require.register("component-emitter/index.js", function(module, exports, require){
+
+/**
+ * Expose `Emitter`.
+ */
+
+module.exports = Emitter;
+
+/**
+ * Initialize a new `Emitter`.
+ * 
+ * @api public
+ */
+
+function Emitter(obj) {
+  if (obj) return mixin(obj);
+};
+
+/**
+ * Mixin the emitter properties.
+ *
+ * @param {Object} obj
+ * @return {Object}
+ * @api private
+ */
+
+function mixin(obj) {
+  for (var key in Emitter.prototype) {
+    obj[key] = Emitter.prototype[key];
+  }
+  return obj;
+}
+
+/**
+ * Listen on the given `event` with `fn`.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.on = function(event, fn){
+  this._callbacks = this._callbacks || {};
+  (this._callbacks[event] = this._callbacks[event] || [])
+    .push(fn);
+  return this;
+};
+
+/**
+ * Adds an `event` listener that will be invoked a single
+ * time then automatically removed.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.once = function(event, fn){
+  var self = this;
+  this._callbacks = this._callbacks || {};
+
+  function on() {
+    self.off(event, on);
+    fn.apply(this, arguments);
+  }
+
+  fn._off = on;
+  this.on(event, on);
+  return this;
+};
+
+/**
+ * Remove the given callback for `event` or all
+ * registered callbacks.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.off = function(event, fn){
+  this._callbacks = this._callbacks || {};
+  var callbacks = this._callbacks[event];
+  if (!callbacks) return this;
+
+  // remove all handlers
+  if (1 == arguments.length) {
+    delete this._callbacks[event];
+    return this;
+  }
+
+  // remove specific handler
+  var i = callbacks.indexOf(fn._off || fn);
+  if (~i) callbacks.splice(i, 1);
+  return this;
+};
+
+/**
+ * Emit `event` with the given args.
+ *
+ * @param {String} event
+ * @param {Mixed} ...
+ * @return {Emitter} 
+ */
+
+Emitter.prototype.emit = function(event){
+  this._callbacks = this._callbacks || {};
+  var args = [].slice.call(arguments, 1)
+    , callbacks = this._callbacks[event];
+
+  if (callbacks) {
+    callbacks = callbacks.slice(0);
+    for (var i = 0, len = callbacks.length; i < len; ++i) {
+      callbacks[i].apply(this, args);
+    }
+  }
+
+  return this;
+};
+
+/**
+ * Return array of callbacks for `event`.
+ *
+ * @param {String} event
+ * @return {Array}
+ * @api public
+ */
+
+Emitter.prototype.listeners = function(event){
+  this._callbacks = this._callbacks || {};
+  return this._callbacks[event] || [];
+};
+
+/**
+ * Check if this emitter has `event` handlers.
+ *
+ * @param {String} event
+ * @return {Boolean}
+ * @api public
+ */
+
+Emitter.prototype.hasListeners = function(event){
+  return !! this.listeners(event).length;
+};
+
+
+});
 require.register("component-inherit/index.js", function(module, exports, require){
 
 module.exports = function(a, b){
@@ -1446,6 +1446,7 @@ require.register("everyplay-js/lib/sdk.js", function(module, exports, require){
 var API = require('./api');
 var Auth = require('./auth');
 var Dialog = require('./dialog');
+var Widget = require('./widget');
 
 Dialog.handle();
 
@@ -1536,6 +1537,7 @@ exports.oEmbed = function() {
 
 
 exports.Dialog = Dialog;
+exports.Widget = Widget;
 
 });
 require.register("everyplay-js/lib/api.js", function(module, exports, require){
@@ -1881,11 +1883,115 @@ AuthPrototype.connected = function() {
 module.exports = Auth;
 });
 require.register("everyplay-js/lib/widget.js", function(module, exports, require){
-var Widget = function(options) {
+var Emitter = require('emitter');
+var qs = require('querystring');
 
+function init (callback) {
+  var self = this;
+  makeCall.call(this, 'init', [], function () {
+    self.emit(Widget.Events.READY);
+  });
+}
+
+function initIFrame () {
+  var self = this;
+  if (this._iframe.src && this._iframe.src.length > 0) {
+    this._iframe.onload = function () {
+      init.call(self, function () {
+        self._initialized = true;
+      });
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    var data = event.data;
+    var args = data.args || [];
+    var callback_id = data.callback_id;
+    if (self._callbacks[callback_id]) {
+      self._callbacks[callback_id].apply(self, args);
+    }
+  }, false);
+
+}
+
+function makeCall(fn, args, callback) {
+  if (callback) {
+    var id = this._next_callback_id++;
+    this._callbacks[id] = callback;
+  }
+
+  this._iframe.contentWindow.postMessage({
+    fn: fn,
+    args: args,
+    callback_id: id
+  }, this._iframe.src);
+}
+
+function createWidgetFunction (type, argsCount, hasCallback) {
+  return function () {
+    var self = this;
+    var args = Array.prototype.slice.call(arguments);
+
+    function make() {
+      makeCall.call(self, type, args.splice(0, argsCount), (hasCallback) ? args.pop() : null);
+    }
+
+    if (this._initialized) {
+      make();
+    } else {
+      self.once(Widget.Events.READY, function () {
+        make();
+      });
+    }
+  }
+}
+
+var Widget = function(element) {
+  Emitter.call(this);
+  this._iframe = (typeof element === "string") ? document.getElementById(element) : element;
+  this._next_callback_id = 0;
+  this._callbacks = [];
+  this._initialized = false;
+  initIFrame.call(this);
 };
 
-WidgetPrototype = Widget.prototype;
+var WidgetPrototype = Widget.prototype = new Emitter();
+WidgetPrototype.constructor = Widget;
+
+
+WidgetPrototype.load = createWidgetFunction("load", 2, false);
+
+WidgetPrototype.play = createWidgetFunction("play", 0, false);
+WidgetPrototype.pause = createWidgetFunction("pause", 0, false);
+WidgetPrototype.seekTo = createWidgetFunction("seekTo", 1, false);
+WidgetPrototype.next = createWidgetFunction("next", 0, false);
+WidgetPrototype.prev = createWidgetFunction("prev", 0, false);
+WidgetPrototype.skip = createWidgetFunction("skip", 1, false);
+WidgetPrototype.toggle = createWidgetFunction("toggle");
+
+/*Getters*/
+WidgetPrototype.getVolume = createWidgetFunction("getVolume", 0, true);
+WidgetPrototype.getDuration = createWidgetFunction("getDuration", 0, true);
+WidgetPrototype.getPosition = createWidgetFunction("getPosition", 0, true);
+WidgetPrototype.getVideos = createWidgetFunction("getVideos", 0, true);
+WidgetPrototype.getCurrentVideo = createWidgetFunction("getCurrentVideo", 0, true);
+WidgetPrototype.getCurrentVideoIndex = createWidgetFunction("getCurrentVideoIndex", 0, true);
+WidgetPrototype.isPaused = createWidgetFunction("isPaused", 0, true);
+
+Widget.Events = {
+  /*PLAYER*/
+  LOAD_PROGRESS: "LOAD_PROGRESS"
+  , PLAY_PROGRESS: "PLAY_PROGRESS"
+  , PLAY: "PLAY"
+  , PAUSE: "PAUSE"
+  , FINISH: "FINISH"
+  , SEEK: "SEEK"
+  /*UI*/
+  , READY: "READY"
+  , CLICK_EXTERNAL: "CLICK_EXTERNAL"
+  , OPEN_SHARE_PANEL: "OPEN_SHARE_PANEL"
+  , SHARE: "SHARE"
+};
 
 module.exports = Widget;
 
@@ -1894,8 +2000,10 @@ require.register("everyplay-js/lib/oembed.js", function(module, exports, require
 
 
 var oEmbed = function() {
-  
+
 }
+
+module.exports = oEmbed;
 });
 require.alias("component-url/index.js", "everyplay-js/deps/url/index.js");
 
@@ -1907,6 +2015,8 @@ require.alias("component-querystring/index.js", "everyplay-js/deps/querystring/i
 require.alias("component-trim/index.js", "component-querystring/deps/trim/index.js");
 
 require.alias("redventures-reduce/index.js", "component-querystring/deps/reduce/index.js");
+
+require.alias("component-emitter/index.js", "everyplay-js/deps/emitter/index.js");
 
 require.alias("component-inherit/index.js", "everyplay-js/deps/inherit/index.js");
 

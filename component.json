@@ -8,6 +8,7 @@
     "component/url": "*",
     "visionmedia/superagent": "*",
     "component/querystring": "*",
+    "component/emitter": "*",
     "component/inherit": "*",
     "yields/merge": "*",
     "component/object": "*"
