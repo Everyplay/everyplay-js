@@ -1904,14 +1904,21 @@ function initIFrame () {
   }
 
   window.addEventListener("message", function (event) {
+    if (self._iframe.src.indexOf(event.origin) === -1) {
+      return;
+    }
+
     var data = event.data;
-    var args = data.args || [];
-    var callback_id = data.callback_id;
-    if (self._callbacks[callback_id]) {
-      self._callbacks[callback_id].apply(self, args);
+    if (data.event_type) {
+      self.emit.apply(self, [data.event_type].concat(data.args || []));
+    } else if(data.callback_id !== undefined) {
+      var args = data.args || [];
+      var callback_id = data.callback_id;
+      if (self._callbacks[callback_id]) {
+        self._callbacks[callback_id].apply(self, args);
+      }
     }
   }, false);
-
 }
 
 function makeCall(fn, args, callback) {
