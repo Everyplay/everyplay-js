@@ -1886,14 +1886,14 @@ require.register("everyplay-js/lib/widget.js", function(module, exports, require
 var Emitter = require('emitter');
 var qs = require('querystring');
 
-function init (callback) {
+function init(callback) {
   var self = this;
   makeCall.call(this, 'init', [], function () {
     self.emit(Widget.Events.READY);
   });
 }
 
-function initIFrame () {
+function initIFrame() {
   var self = this;
   if (this._iframe.src && this._iframe.src.length > 0) {
     this._iframe.onload = function () {
@@ -1905,13 +1905,21 @@ function initIFrame () {
 
   window.addEventListener("message", function (event) {
     if (self._iframe.src.indexOf(event.origin) === -1) {
-      return;
+      //return;
     }
 
     var data = event.data;
+
+    if (typeof data === "string") {
+        try {
+            data = JSON.parse(data);
+        } catch(e) {}
+    }
+
+
     if (data.event_type) {
       self.emit.apply(self, [data.event_type].concat(data.args || []));
-    } else if(data.callback_id !== undefined) {
+    } else if (data.callback_id !== undefined) {
       var args = data.args || [];
       var callback_id = data.callback_id;
       if (self._callbacks[callback_id]) {
@@ -1922,19 +1930,23 @@ function initIFrame () {
 }
 
 function makeCall(fn, args, callback) {
+  if (this._iframe == null) {
+    return;
+  }
+
   if (callback) {
     var id = this._next_callback_id++;
     this._callbacks[id] = callback;
   }
 
-  this._iframe.contentWindow.postMessage({
+  this._iframe.contentWindow.postMessage(JSON.stringify({
     fn: fn,
     args: args,
     callback_id: id
-  }, this._iframe.src);
+  }), this._iframe.src);
 }
 
-function createWidgetFunction (type, argsCount, hasCallback) {
+function createWidgetFunction(type, argsCount, hasCallback) {
   return function () {
     var self = this;
     var args = Array.prototype.slice.call(arguments);
@@ -1953,7 +1965,7 @@ function createWidgetFunction (type, argsCount, hasCallback) {
   }
 }
 
-var Widget = function(element) {
+var Widget = function (element) {
   Emitter.call(this);
   this._iframe = (typeof element === "string") ? document.getElementById(element) : element;
   this._next_callback_id = 0;
@@ -1987,17 +1999,8 @@ WidgetPrototype.isPaused = createWidgetFunction("isPaused", 0, true);
 
 Widget.Events = {
   /*PLAYER*/
-  LOAD_PROGRESS: "LOAD_PROGRESS"
-  , PLAY_PROGRESS: "PLAY_PROGRESS"
-  , PLAY: "PLAY"
-  , PAUSE: "PAUSE"
-  , FINISH: "FINISH"
-  , SEEK: "SEEK"
-  /*UI*/
-  , READY: "READY"
-  , CLICK_EXTERNAL: "CLICK_EXTERNAL"
-  , OPEN_SHARE_PANEL: "OPEN_SHARE_PANEL"
-  , SHARE: "SHARE"
+  LOAD_PROGRESS: "LOAD_PROGRESS", PLAY_PROGRESS: "PLAY_PROGRESS", PLAY: "PLAY", PAUSE: "PAUSE", FINISH: "FINISH", SEEK: "SEEK"
+  /*UI*/, READY: "READY", CLICK_EXTERNAL: "CLICK_EXTERNAL", OPEN_SHARE_PANEL: "OPEN_SHARE_PANEL", SHARE: "SHARE"
 };
 
 module.exports = Widget;
