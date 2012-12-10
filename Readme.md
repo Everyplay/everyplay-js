@@ -7,9 +7,9 @@
 
     $ component install Everyplay/everyplay-js
 
-## API
+## Usage   
 
-   
+https://developers.everyplay.com
 
 ## License
 
