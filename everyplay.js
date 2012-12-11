@@ -1453,6 +1453,7 @@ Dialog.handle();
 var SDK = function(options) {
   options.base = options.base || "https://api.everyplay.com";
   options.site = options.site || "https://everyplay.com";
+  options.namespace = options.namespace || '';
   this.options = options;
   this.client_id = options.client_id;
   if(!this.client_id) {
@@ -1531,6 +1532,15 @@ exports.dialog = function(name, options, callback) {
   return Dialog.dialog(name, options, callback);
 };
 
+
+exports.singleton = function(ep) {
+  if(ep === undefined) {
+    return sdkSingleton;
+  }
+  sdkSingleton = ep;
+  return sdkSingleton;
+};
+
 exports.oEmbed = function() {
 
 };
@@ -1545,7 +1555,6 @@ require.register("everyplay-js/lib/api.js", function(module, exports, require){
 var URL = require('url');
 var request = require('superagent');
 var qs = require('querystring');
-// old browser replacements for .keys etc.
 var object = require('object');
 var everyplay = require('./sdk');
 
@@ -1578,6 +1587,7 @@ APIPrototype.requestUrl = function(path, query) {
     path = this.base + path;
   }
   var loc = URL.parse(path);
+
   if(loc.query) {
     loc.query = qs.parse(loc.query);
   } else {
@@ -1588,10 +1598,11 @@ APIPrototype.requestUrl = function(path, query) {
     loc.query[key] = query[key];
   });
 
-  var token = everyplay.accessToken();
+  var token = this.sdk.accessToken();
   if(!token && this.options.client_id) {
     loc.query['client_id'] = this.options.client_id;
   }
+  console.log("Parsed api request url",loc);
   return loc;
 }
 
@@ -1605,22 +1616,22 @@ APIPrototype.apiRequest = function(method, url, query, callback) {
   url.query.format = "json";
   data = url.query;
   url.query = {};
-  var requestUrl = url.protocol + url.host + url.pathname;
+  var requestUrl = url.protocol + '//' + url.host + url.pathname;
   var req = request[method.toLowerCase()](requestUrl);
   if(method != "GET") {
     req.send(data)
   } else {
     req.query(data);
   }
-  if(everyplay.accessToken()) {
-    req.set('Authorization', 'Bearer '+everyplay.accessToken());
+  if(this.sdk.accessToken()) {
+    req.set('Authorization', 'Bearer '+this.sdk.accessToken());
   }
   req.set('Accept','application/json');
   req.end(function(err, res) {
     if(!err && res.error) {
       err = new Error("HTTP Error "+res.status)
     }
-    return callback(err, res);
+    return callback(err, res.body);
   });
 }
 
@@ -1701,17 +1712,20 @@ var DialogPrototype = Dialog.prototype;
 
 DialogPrototype.paramsFromWindow = function(window) {
   var params = {};
-  var loc = URL.parse(window.location.toString());
-  loc.query = qs.parse(loc.query);
-  if(loc.hash && loc.hash.length) {
-    loc.hash = qs.parse(loc.hash.substring(1));
+  var splitted = window.location.toString().split(/[&?#]/);
+  if (splitted[0].match(/^http/)) {
+    splitted.shift();
   }
-  if(loc.hash) {
-    params = merge(params, loc.hash);
+  
+  for (var i in splitted) {
+    if (splitted.hasOwnProperty(i)) {
+      var kv = splitted[i].split("=");
+      if (kv[0]) {
+        params[kv[0]] = decodeURIComponent(kv[1]);
+      }
+    }
   }
-  if(loc.query) {
-    params = merge(params, loc.query);
-  }
+
   return params;
 }
 /**
@@ -1826,7 +1840,9 @@ var Auth = function(sdk) {
   this.storage = window.localStorage;
   this.sdk = sdk;
   this.options = sdk.options;
-  this.token = this.storage.getItem('EP.accessToken');
+  this.namespace = sdk.options.namespace || '';
+  this.token = this.accessToken();
+
   this.dialogOptions = {
       client_id: this.options.client_id
     , redirect_uri: this.options.redirect_uri
@@ -1846,13 +1862,13 @@ AuthPrototype.accessToken = function(token) {
   }
   if (token === null) {
     this.token = undefined;
-    return this.storage.removeItem("EP.accessToken");
+    return this.storage.removeItem(this.namespace+"EP.accessToken");
   } else if (token === undefined) {
-    this.token = this.storage.getItem("EP.accessToken");
+    this.token = this.storage.getItem(this.namespace+"EP.accessToken");
     return this.token;
   } else {
     this.token = token;
-    return this.storage.setItem("EP.accessToken", token);
+    return this.storage.setItem(this.namespace+"EP.accessToken", token);
   }
 }
 
