@@ -250,13 +250,40 @@ exports.isCrossDomain = function(url){
     || url.protocol !== location.protocol;
 };
 });
+require.register("RedVentures-reduce/index.js", function(module, exports, require){
+
+/**
+ * Reduce `arr` with `fn`.
+ *
+ * @param {Array} arr
+ * @param {Function} fn
+ * @param {Mixed} initial
+ *
+ * TODO: combatible error handling?
+ */
+
+module.exports = function(arr, fn, initial){  
+  var idx = 0;
+  var len = arr.length;
+  var curr = arguments.length == 3
+    ? initial
+    : arr[idx++];
+
+  while (idx < len) {
+    curr = fn.call(null, curr, arr[idx], ++idx, arr);
+  }
+  
+  return curr;
+};
+});
 require.register("visionmedia-superagent/lib/client.js", function(module, exports, require){
 
 /**
  * Module dependencies.
  */
 
-var Emitter = require('emitter');
+var Emitter = require('emitter')
+  , reduce = require('reduce');
 
 /**
  * Root reference for iframes.
@@ -460,7 +487,7 @@ function type(str){
  */
 
 function params(str){
-  return str.split(/ *; */).reduce(function(obj, str){
+  return reduce(str.split(/ *; */), function(obj, str){
     var parts = str.split(/ *= */)
       , key = parts.shift()
       , val = parts.shift();
@@ -599,7 +626,9 @@ Response.prototype.setStatusProperties = function(status){
   this.ok = 2 == type;
   this.clientError = 4 == type;
   this.serverError = 5 == type;
-  this.error = 4 == type || 5 == type;
+  this.error = (4 == type || 5 == type)
+    ? this.toError()
+    : false;
 
   // sugar
   this.accepted = 202 == status;
@@ -648,7 +677,9 @@ function Request(method, url) {
   this.header = {};
   this.set('X-Requested-With', 'XMLHttpRequest');
   this.on('end', function(){
-    self.callback(null, new Response(self.xhr));
+    var res = new Response(self.xhr);
+    if ('HEAD' == method) res.text = null;
+    self.callback(null, res);
   });
 }
 
@@ -694,10 +725,10 @@ Request.prototype.clearTimeout = function(){
 
 Request.prototype.abort = function(){
   if (this.aborted) return;
-  this.xhr.abort();
-  this.emit('abort');
   this.aborted = true;
+  this.xhr.abort();
   this.clearTimeout();
+  this.emit('abort');
   return this;
 };
 
@@ -875,6 +906,47 @@ Request.prototype.callback = function(err, res){
 };
 
 /**
+ * Invoke callback with x-domain error.
+ *
+ * @api private
+ */
+
+Request.prototype.crossDomainError = function(){
+  var err = new Error('Origin is not allowed by Access-Control-Allow-Origin');
+  err.crossDomain = true;
+  this.callback(err);
+};
+
+/**
+ * Invoke callback with timeout error.
+ *
+ * @api private
+ */
+
+Request.prototype.timeoutError = function(){
+  var timeout = this._timeout;
+  var err = new Error('timeout of ' + timeout + 'ms exceeded');
+  err.timeout = timeout;
+  this.callback(err);
+};
+
+/**
+ * Enable transmission of cookies with x-domain requests.
+ *
+ * Note that for this to work the origin must not be
+ * using "Access-Control-Allow-Origin" with a wildcard,
+ * and also must set "Access-Control-Allow-Credentials"
+ * to "true".
+ *
+ * @api public
+ */
+
+Request.prototype.withCredentials = function(){
+  this._withCredentials = true;
+  return this;
+};
+
+/**
  * Initiate request, invoking callback `fn(res)`
  * with an instanceof `Response`.
  *
@@ -893,17 +965,22 @@ Request.prototype.end = function(fn){
   // store callback
   this._callback = fn || noop;
 
+  // CORS
+  if (this._withCredentials) xhr.withCredentials = true;
+
   // state change
   xhr.onreadystatechange = function(){
-    if (4 == xhr.readyState && 0 != xhr.status) self.emit('end');
+    if (4 != xhr.readyState) return;
+    if (0 == xhr.status) {
+      if (self.aborted) return self.timeoutError();
+      return self.crossDomainError();
+    }
+    self.emit('end');
   };
 
   // timeout
   if (timeout && !this._timer) {
     this._timer = setTimeout(function(){
-      var err = new Error('timeout of ' + timeout + 'ms exceeded');
-      err.timeout = timeout;
-      self.callback(err);
       self.abort();
     }, timeout);
   }
@@ -1081,6 +1158,7 @@ request.put = function(url, data, fn){
  */
 
 module.exports = request;
+
 });
 require.register("component-trim/index.js", function(module, exports, require){
 
@@ -1182,7 +1260,7 @@ module.exports = Emitter;
 
 /**
  * Initialize a new `Emitter`.
- * 
+ *
  * @api public
  */
 
@@ -1255,7 +1333,9 @@ Emitter.prototype.once = function(event, fn){
  * @api public
  */
 
-Emitter.prototype.off = function(event, fn){
+Emitter.prototype.off =
+Emitter.prototype.removeListener =
+Emitter.prototype.removeAllListeners = function(event, fn){
   this._callbacks = this._callbacks || {};
   var callbacks = this._callbacks[event];
   if (!callbacks) return this;
@@ -1277,7 +1357,7 @@ Emitter.prototype.off = function(event, fn){
  *
  * @param {String} event
  * @param {Mixed} ...
- * @return {Emitter} 
+ * @return {Emitter}
  */
 
 Emitter.prototype.emit = function(event){
@@ -1319,7 +1399,6 @@ Emitter.prototype.listeners = function(event){
 Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
-
 
 });
 require.register("component-inherit/index.js", function(module, exports, require){
@@ -1447,6 +1526,7 @@ var API = require('./api');
 var Auth = require('./auth');
 var Dialog = require('./dialog');
 var Widget = require('./widget');
+
 
 Dialog.handle();
 
@@ -1761,10 +1841,14 @@ DialogPrototype.url = function(path) {
 
 DialogPrototype.open = function() {
   var url = this.url(this.site + this.path);
-  if(this.dialogOptions.window && !this.dialogOptions.window.closed) {
-    this.dialogOptions.window.location = url;
+  if(this.dialogOptions.dialog == "popup") {
+    if(this.dialogOptions.window && !this.dialogOptions.window.closed) {
+      this.dialogOptions.window.location = url;
+    } else {
+      this.dialogOptions.window = openWindow(url, this.dialogOptions);
+    }
   } else {
-    this.dialogOptions.window = openWindow(url, this.dialogOptions);
+    document.location.href = url;
   }
 };
 
@@ -1835,6 +1919,10 @@ exports.handleReturn = function(window) {
 });
 require.register("everyplay-js/lib/auth.js", function(module, exports, require){
 var Dialog = require('./dialog');
+var URL = require('url');
+var qs = require('querystring');
+var inherit = require('inherit');
+var merge = require('merge');
 
 var Auth = function(sdk) {
   this.storage = window.localStorage;
@@ -1848,10 +1936,21 @@ var Auth = function(sdk) {
     , redirect_uri: this.options.redirect_uri
     , response_type:  "token"
     , scope: this.options.scope || "basic"
-    , display: "popup"
+    , display: this.options.display || "popup"
     , window: this.options.window
     , retain: this.options.retain };
   this.dialogWindow = null;
+
+  var loc = URL.parse(window.location.toString());
+  loc.query = qs.parse(loc.query);
+  if(loc.hash && loc.hash.length) {
+    loc.hash = qs.parse(loc.hash.substring(1));
+  }
+
+  if(loc.hash.access_token) {
+    this.accessToken(loc.hash.access_token);
+    document.location.href = document.location.search;
+  }
 }
 
 var AuthPrototype = Auth.prototype;
@@ -2036,6 +2135,8 @@ require.alias("component-url/index.js", "everyplay-js/deps/url/index.js");
 require.alias("visionmedia-superagent/lib/client.js", "everyplay-js/deps/superagent/lib/client.js");
 require.alias("visionmedia-superagent/lib/client.js", "everyplay-js/deps/superagent/index.js");
 require.alias("component-emitter/index.js", "visionmedia-superagent/deps/emitter/index.js");
+
+require.alias("RedVentures-reduce/index.js", "visionmedia-superagent/deps/reduce/index.js");
 
 require.alias("component-querystring/index.js", "everyplay-js/deps/querystring/index.js");
 require.alias("component-trim/index.js", "component-querystring/deps/trim/index.js");
