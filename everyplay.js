@@ -204,7 +204,7 @@ exports.parse = function(url){
     port: a.port || location.port,
     hash: a.hash,
     hostname: a.hostname || location.hostname,
-    pathname: a.pathname,
+    pathname: a.pathname.charAt(0) != '/' ? '/' + a.pathname : a.pathname,
     protocol: !a.protocol || ':' == a.protocol ? location.protocol : a.protocol,
     search: a.search,
     query: a.search.slice(1)
@@ -548,10 +548,26 @@ function Response(xhr, options) {
   this.xhr = xhr;
   this.text = xhr.responseText;
   this.setStatusProperties(xhr.status);
-  this.header = parseHeader(xhr.getAllResponseHeaders());
+  this.header = this.headers = parseHeader(xhr.getAllResponseHeaders());
+  // getAllResponseHeaders sometimes falsely returns "" for CORS requests, but
+  // getResponseHeader still works. so we get content-type even if getting
+  // other headers fails.
+  this.header['content-type'] = xhr.getResponseHeader('content-type');
   this.setHeaderProperties(this.header);
   this.body = this.parseBody(this.text);
 }
+
+/**
+ * Get case-insensitive `field` value.
+ *
+ * @param {String} field
+ * @return {String}
+ * @api public
+ */
+
+Response.prototype.get = function(field){
+  return this.header[field.toLowerCase()];
+};
 
 /**
  * Set header related properties:
@@ -675,6 +691,7 @@ function Request(method, url) {
   this.method = method;
   this.url = url;
   this.header = {};
+  this._header = {};
   this.set('X-Requested-With', 'XMLHttpRequest');
   this.on('end', function(){
     var res = new Response(self.xhr);
@@ -759,8 +776,21 @@ Request.prototype.set = function(field, val){
     }
     return this;
   }
-  this.header[field.toLowerCase()] = val;
+  this._header[field.toLowerCase()] = val;
+  this.header[field] = val;
   return this;
+};
+
+/**
+ * Get case-insensitive header `field` value.
+ *
+ * @param {String} field
+ * @return {String}
+ * @api private
+ */
+
+Request.prototype.getHeader = function(field){
+  return this._header[field.toLowerCase()];
 };
 
 /**
@@ -863,7 +893,7 @@ Request.prototype.query = function(val){
 
 Request.prototype.send = function(data){
   var obj = isObject(data);
-  var type = this.header['content-type'];
+  var type = this.getHeader('Content-Type');
 
   // merge
   if (obj && isObject(this._data)) {
@@ -872,7 +902,7 @@ Request.prototype.send = function(data){
     }
   } else if ('string' == typeof data) {
     if (!type) this.type('form');
-    type = this.header['content-type'];
+    type = this.getHeader('Content-Type');
     if ('application/x-www-form-urlencoded' == type) {
       this._data = this._data
         ? this._data + '&' + data
@@ -978,6 +1008,14 @@ Request.prototype.end = function(fn){
     self.emit('end');
   };
 
+  // progress
+  if (xhr.upload) {
+    xhr.upload.onprogress = function(e){
+      e.percent = e.loaded / e.total * 100;
+      self.emit('progress', e);
+    };
+  }
+
   // timeout
   if (timeout && !this._timer) {
     this._timer = setTimeout(function(){
@@ -999,12 +1037,13 @@ Request.prototype.end = function(fn){
   // body
   if ('GET' != this.method && 'HEAD' != this.method && 'string' != typeof data) {
     // serialize stuff
-    var serialize = request.serialize[this.header['content-type']];
+    var serialize = request.serialize[this.getHeader('Content-Type')];
     if (serialize) data = serialize(data);
   }
 
   // set header fields
   for (var field in this.header) {
+    if (null == this.header[field]) continue;
     xhr.setRequestHeader(field, this.header[field]);
   }
 
@@ -1177,40 +1216,13 @@ exports.right = function(str){
 };
 
 });
-require.register("redventures-reduce/index.js", function(module, exports, require){
-
-/**
- * Reduce `arr` with `fn`.
- *
- * @param {Array} arr
- * @param {Function} fn
- * @param {Mixed} initial
- *
- * TODO: combatible error handling?
- */
-
-module.exports = function(arr, fn, initial){  
-  var idx = 0;
-  var len = arr.length;
-  var curr = arguments.length == 3
-    ? initial
-    : arr[idx++];
-
-  while (idx < len) {
-    curr = fn.call(null, curr, arr[idx], ++idx, arr);
-  }
-  
-  return curr;
-};
-});
 require.register("component-querystring/index.js", function(module, exports, require){
 
 /**
  * Module dependencies.
  */
 
-var trim = require('trim')
-  , reduce = require('reduce');
+var trim = require('trim');
 
 /**
  * Parse the given query `str`.
@@ -1222,15 +1234,20 @@ var trim = require('trim')
 
 exports.parse = function(str){
   if ('string' != typeof str) return {};
+
   str = trim(str);
   if ('' == str) return {};
-  return reduce(str.split('&'), function(obj, pair){
-    var parts = pair.split('=');
+
+  var obj = {};
+  var pairs = str.split('&');
+  for (var i = 0; i < pairs.length; i++) {
+    var parts = pairs[i].split('=');
     obj[parts[0]] = null == parts[1]
       ? ''
       : decodeURIComponent(parts[1]);
-    return obj;
-  }, {});
+  }
+
+  return obj;
 };
 
 /**
@@ -1249,8 +1266,27 @@ exports.stringify = function(obj){
   }
   return pairs.join('&');
 };
+
+});
+require.register("component-indexof/index.js", function(module, exports, require){
+
+var indexOf = [].indexOf;
+
+module.exports = function(arr, obj){
+  if (indexOf) return arr.indexOf(obj);
+  for (var i = 0; i < arr.length; ++i) {
+    if (arr[i] === obj) return i;
+  }
+  return -1;
+};
 });
 require.register("component-emitter/index.js", function(module, exports, require){
+
+/**
+ * Module dependencies.
+ */
+
+var index = require('indexof');
 
 /**
  * Expose `Emitter`.
@@ -1337,6 +1373,14 @@ Emitter.prototype.off =
 Emitter.prototype.removeListener =
 Emitter.prototype.removeAllListeners = function(event, fn){
   this._callbacks = this._callbacks || {};
+
+  // all
+  if (0 == arguments.length) {
+    this._callbacks = {};
+    return this;
+  }
+
+  // specific event
   var callbacks = this._callbacks[event];
   if (!callbacks) return this;
 
@@ -1347,7 +1391,7 @@ Emitter.prototype.removeAllListeners = function(event, fn){
   }
 
   // remove specific handler
-  var i = callbacks.indexOf(fn._off || fn);
+  var i = index(callbacks, fn._off || fn);
   if (~i) callbacks.splice(i, 1);
   return this;
 };
@@ -1841,7 +1885,7 @@ DialogPrototype.url = function(path) {
 
 DialogPrototype.open = function() {
   var url = this.url(this.site + this.path);
-  if(this.dialogOptions.dialog == "popup") {
+  if(this.dialogOptions.display == "popup") {
     if(this.dialogOptions.window && !this.dialogOptions.window.closed) {
       this.dialogOptions.window.location = url;
     } else {
@@ -1883,20 +1927,21 @@ exports.dialog = function(sdk, name, options, callback) {
  * Called by this script every time it is loaded, handles any possible returns to parent window.
  */
 exports.handle = function() {
-  var id = getDialogFromWindow(window);
-
-  if(id) {
-    var ios = (navigator.userAgent.match(/OS 5(_\d)+ like Mac OS X/i));
-    if(ios) {
-      window.opener.EP.Dialog.handleReturn(window);
-    } else if(window.opener) {
-      window.opener.setTimeout(function() {
+  if((window.opener && window.opener.EP) || (window.top && window.top.EP)) {
+    var id = getDialogFromWindow(window);
+    if(id) {
+      var ios = (navigator.userAgent.match(/OS 5(_\d)+ like Mac OS X/i));
+      if(ios) {
         window.opener.EP.Dialog.handleReturn(window);
-      }, 1);
-    } else if(window.top) {
-      window.top.setTimeout(function() {
-        window.top.EP.Dialog.handleReturn(window);
-      }, 1);
+      } else if(window.opener) {
+        window.opener.setTimeout(function() {
+          window.opener.EP.Dialog.handleReturn(window);
+        }, 1);
+      } else if(window.top) {
+        window.top.setTimeout(function() {
+          window.top.EP.Dialog.handleReturn(window);
+        }, 1);
+      }
     }
   }
 }
@@ -2135,15 +2180,15 @@ require.alias("component-url/index.js", "everyplay-js/deps/url/index.js");
 require.alias("visionmedia-superagent/lib/client.js", "everyplay-js/deps/superagent/lib/client.js");
 require.alias("visionmedia-superagent/lib/client.js", "everyplay-js/deps/superagent/index.js");
 require.alias("component-emitter/index.js", "visionmedia-superagent/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
 
 require.alias("RedVentures-reduce/index.js", "visionmedia-superagent/deps/reduce/index.js");
 
 require.alias("component-querystring/index.js", "everyplay-js/deps/querystring/index.js");
 require.alias("component-trim/index.js", "component-querystring/deps/trim/index.js");
 
-require.alias("redventures-reduce/index.js", "component-querystring/deps/reduce/index.js");
-
 require.alias("component-emitter/index.js", "everyplay-js/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
 
 require.alias("component-inherit/index.js", "everyplay-js/deps/inherit/index.js");
 
