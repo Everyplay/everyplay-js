@@ -1612,8 +1612,8 @@ SDKPrototype.accessToken = function(token) {
   return this.auth.accessToken(token);
 }
 
-SDKPrototype.connect = function(cb) {
-  return this.auth.connect(cb);
+SDKPrototype.connect = function(options, cb) {
+  return this.auth.connect(options, cb);
 }
 
 SDKPrototype.accessToken = function(token) {
@@ -1648,8 +1648,8 @@ exports.del = function(path, data, callback) {
   sdkSingleton.api.del(path, data, callback);
 };
 
-exports.connect = function(callback) {
-  sdkSingleton.connect(callback);
+exports.connect = function(options, callback) {
+  sdkSingleton.connect(options, callback);
 };
 
 exports.dialog = function(name, options, callback) {
@@ -1794,7 +1794,6 @@ function openWindow(url, options) {
       opts.push(i+"="+options[i]);
     }
   }
-
   return window.open(url, options.name, opts.join(', '));
 }
 
@@ -1896,6 +1895,33 @@ DialogPrototype.open = function() {
   }
 };
 
+var FacebookDialog = function(options, sdk) {
+  Dialog.call(this, options, sdk);
+  this.name = "facebook";
+  this.path = "/connect/facebook";
+  this.params = ["client_id","redirect_uri","state","response_type","scope","display", "limited_token"];
+  this.dialogOptions.width = 320;
+  this.dialogOptions.height = 480;
+}
+
+var TwitterDialog = function(options, sdk) {
+  Dialog.call(this, options, sdk);
+  this.name = "twitter";
+  this.path = "/connect/twitter";
+  this.params = ["client_id","redirect_uri","state","response_type","scope","display", "limited_token"];
+  this.dialogOptions.width = 320;
+  this.dialogOptions.height = 480;
+}
+
+var GoogleDialog = function(options, sdk) {
+  Dialog.call(this, options, sdk);
+  this.name = "connect";
+  this.path = "/connect/google";
+  this.params = ["client_id","redirect_uri","state","response_type","scope","display", "limited_token"];
+  this.dialogOptions.width = 320;
+  this.dialogOptions.height = 480;
+}
+
 var ConnectDialog = function(options, sdk) {
   Dialog.call(this, options, sdk);
   this.name = "connect";
@@ -1909,15 +1935,22 @@ ConnectDialogPrototype = ConnectDialog.prototype;
 
 
 inherit(ConnectDialog, Dialog);
+inherit(TwitterDialog, Dialog);
+inherit(FacebookDialog, Dialog);
+inherit(GoogleDialog, Dialog);
 
 var dialogs = {};
 exports.dialogs = {
-  'Connect': ConnectDialog
+  'connect': ConnectDialog,
+  "facebook": FacebookDialog,
+  "twitter": TwitterDialog,
+  "google": GoogleDialog,
+  "youtube": GoogleDialog
 }
 
 exports.dialog = function(sdk, name, options, callback) {
   options.callback = callback;
-  var dialog = new exports.dialogs[name](options, sdk);
+  var dialog = new exports.dialogs[name.toLowerCase()](options, sdk);
   dialogs[dialog.id] = dialog;
   dialog.open();
   return dialog;
@@ -2016,12 +2049,21 @@ AuthPrototype.accessToken = function(token) {
   }
 }
 
-AuthPrototype.connect = function(cb) {
-  var self = this;
+AuthPrototype.connect = function(options, cb) {
+  var self = this
+    , dialogType = "connect";
+  if(!cb) {
+    cb = options;
+    options = {};
+  }
+  console.log("Optioms ",options);
   if(this.connected()) {
     return cb(null, this.accessToken());
   }
-  this.dialog = Dialog.dialog(this.sdk, 'Connect', this.dialogOptions, function(params) {
+  if(options.service) {
+    dialogType = options.service;
+  }
+  this.dialog = Dialog.dialog(this.sdk, dialogType, merge(this.dialogOptions, options), function(params) {
     var err;
 
     if(params.error) {
