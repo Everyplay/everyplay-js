@@ -1917,7 +1917,7 @@ var TwitterDialog = function(options, sdk) {
   this.path = "/connect/twitter";
   this.dialogOptions.limited_token = 1;
   this.params = ["client_id","redirect_uri","state","response_type","scope","display", "limited_token"];
-  this.dialogOptions.width = 320;
+  this.dialogOptions.width = 550;
   this.dialogOptions.height = 480;
 }
 
@@ -2040,7 +2040,9 @@ var Auth = function(sdk) {
 
   if(loc.hash.access_token) {
     this.accessToken(loc.hash.access_token);
-    document.location.href = document.location.search;
+    if(!window.opener || !window.opener.EP) {
+      document.location.href = document.location.search;
+    }
   }
 
 }
