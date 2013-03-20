@@ -1615,7 +1615,9 @@ SDKPrototype.accessToken = function(token) {
 SDKPrototype.connect = function(options, cb) {
   return this.auth.connect(options, cb);
 }
-
+SDKPrototype.scope = function(scope) {
+  return this.auth.scope(scope);
+}
 SDKPrototype.accessToken = function(token) {
   return this.auth.accessToken(token);
 }
@@ -1651,6 +1653,10 @@ exports.del = function(path, data, callback) {
 exports.connect = function(options, callback) {
   sdkSingleton.connect(options, callback);
 };
+
+exports.scope = function(scope) {
+  return sdkSingleton.scope(scope);
+}
 
 exports.dialog = function(name, options, callback) {
   return Dialog.dialog(name, options, callback);
@@ -1899,6 +1905,7 @@ var FacebookDialog = function(options, sdk) {
   Dialog.call(this, options, sdk);
   this.name = "facebook";
   this.path = "/connect/facebook";
+  this.dialogOptions.limited_token = 1;
   this.params = ["client_id","redirect_uri","state","response_type","scope","display", "limited_token"];
   this.dialogOptions.width = 320;
   this.dialogOptions.height = 480;
@@ -1908,6 +1915,7 @@ var TwitterDialog = function(options, sdk) {
   Dialog.call(this, options, sdk);
   this.name = "twitter";
   this.path = "/connect/twitter";
+  this.dialogOptions.limited_token = 1;
   this.params = ["client_id","redirect_uri","state","response_type","scope","display", "limited_token"];
   this.dialogOptions.width = 320;
   this.dialogOptions.height = 480;
@@ -1917,6 +1925,7 @@ var GoogleDialog = function(options, sdk) {
   Dialog.call(this, options, sdk);
   this.name = "connect";
   this.path = "/connect/google";
+  this.dialogOptions.limited_token = 1;
   this.params = ["client_id","redirect_uri","state","response_type","scope","display", "limited_token"];
   this.dialogOptions.width = 320;
   this.dialogOptions.height = 480;
@@ -2008,6 +2017,7 @@ var Auth = function(sdk) {
   this.options = sdk.options;
   this.namespace = sdk.options.namespace || '';
   this.token = this.accessToken();
+  this.scopes = this.scope();
 
   this.dialogOptions = {
       client_id: this.options.client_id
@@ -2024,11 +2034,15 @@ var Auth = function(sdk) {
   if(loc.hash && loc.hash.length) {
     loc.hash = qs.parse(loc.hash.substring(1));
   }
+  if(loc.hash.scope) {
+    this.scope(loc.hash.scope);
+  }
 
   if(loc.hash.access_token) {
     this.accessToken(loc.hash.access_token);
     document.location.href = document.location.search;
   }
+
 }
 
 var AuthPrototype = Auth.prototype;
@@ -2039,6 +2053,7 @@ AuthPrototype.accessToken = function(token) {
   }
   if (token === null) {
     this.token = undefined;
+    this.scope(null);
     return this.storage.removeItem(this.namespace+"EP.accessToken");
   } else if (token === undefined) {
     this.token = this.storage.getItem(this.namespace+"EP.accessToken");
@@ -2056,7 +2071,6 @@ AuthPrototype.connect = function(options, cb) {
     cb = options;
     options = {};
   }
-  console.log("Optioms ",options);
   if(this.connected()) {
     return cb(null, this.accessToken());
   }
@@ -2080,6 +2094,22 @@ AuthPrototype.connect = function(options, cb) {
 
 AuthPrototype.connected = function() {
   return this.accessToken() != null;
+}
+
+AuthPrototype.scope = function(scopes) {
+  if(scopes === undefined && this.scopes !== undefined) {
+    return this.scopes;
+  }
+  if (scopes === null) {
+    this.scopes = undefined;
+    return this.storage.removeItem(this.namespace+"EP.scope");
+  } else if (scopes === undefined) {
+    this.scopes = this.storage.getItem(this.namespace+"EP.scope");
+    return this.scopes;
+  } else {
+    this.scopes = scopes;
+    return this.storage.setItem(this.namespace+"EP.scope", scopes);
+  }
 }
 
 module.exports = Auth;
