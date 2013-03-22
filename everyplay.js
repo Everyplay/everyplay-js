@@ -2034,13 +2034,14 @@ var Auth = function(sdk) {
   if(loc.hash && loc.hash.length) {
     loc.hash = qs.parse(loc.hash.substring(1));
   }
-  if(loc.hash.scope) {
-    this.scope(loc.hash.scope);
-  }
+
 
   if(loc.hash.access_token) {
-    this.accessToken(loc.hash.access_token);
     if(!window.opener || !window.opener.EP) {
+      this.accessToken(loc.hash.access_token);
+      if(loc.hash.scope) {
+        this.scope(loc.hash.scope);
+      }
       document.location.href = document.location.search;
     }
   }
