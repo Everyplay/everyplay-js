@@ -201,7 +201,7 @@ exports.parse = function(url){
   return {
     href: a.href,
     host: a.host || location.host,
-    port: a.port || location.port,
+    port: ('0' === a.port || '' === a.port) ? location.port : a.port,
     hash: a.hash,
     hostname: a.hostname || location.hostname,
     pathname: a.pathname.charAt(0) != '/' ? '/' + a.pathname : a.pathname,
@@ -282,8 +282,8 @@ require.register("visionmedia-superagent/lib/client.js", function(module, export
  * Module dependencies.
  */
 
-var Emitter = require('emitter')
-  , reduce = require('reduce');
+var Emitter = require('emitter');
+var reduce = require('reduce');
 
 /**
  * Root reference for iframes.
@@ -298,6 +298,30 @@ var root = 'undefined' == typeof window
  */
 
 function noop(){};
+
+/**
+ * Check if `obj` is a host object,
+ * we don't want to serialize these :)
+ *
+ * TODO: future proof, move to compoent land
+ *
+ * @param {Object} obj
+ * @return {Boolean}
+ * @api private
+ */
+
+function isHost(obj) {
+  var str = {}.toString.call(obj);
+
+  switch (str) {
+    case '[object File]':
+    case '[object Blob]':
+    case '[object FormData]':
+      return true;
+    default:
+      return false;
+  }
+}
 
 /**
  * Determine XHR.
@@ -692,7 +716,6 @@ function Request(method, url) {
   this.url = url;
   this.header = {};
   this._header = {};
-  this.set('X-Requested-With', 'XMLHttpRequest');
   this.on('end', function(){
     var res = new Response(self.xhr);
     if ('HEAD' == method) res.text = null;
@@ -817,6 +840,21 @@ Request.prototype.getHeader = function(field){
 
 Request.prototype.type = function(type){
   this.set('Content-Type', request.types[type] || type);
+  return this;
+};
+
+/**
+ * Set Authorization field value with `user` and `pass`.
+ *
+ * @param {String} user
+ * @param {String} pass
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.auth = function(user, pass){
+  var str = btoa(user + ':' + pass);
+  this.set('Authorization', 'Basic ' + str);
   return this;
 };
 
@@ -1035,7 +1073,7 @@ Request.prototype.end = function(fn){
   xhr.open(this.method, this.url, true);
 
   // body
-  if ('GET' != this.method && 'HEAD' != this.method && 'string' != typeof data) {
+  if ('GET' != this.method && 'HEAD' != this.method && 'string' != typeof data && !isHost(data)) {
     // serialize stuff
     var serialize = request.serialize[this.getHeader('Content-Type')];
     if (serialize) data = serialize(data);
@@ -1968,23 +2006,26 @@ exports.dialog = function(sdk, name, options, callback) {
 /**
  * Called by this script every time it is loaded, handles any possible returns to parent window.
  */
-exports.handle = function() {
-  if((window.opener && window.opener.EP) || (window.top && window.top.EP)) {
-    var id = getDialogFromWindow(window);
-    if(id) {
-      var ios = (navigator.userAgent.match(/OS 5(_\d)+ like Mac OS X/i));
-      if(ios) {
-        window.opener.EP.Dialog.handleReturn(window);
-      } else if(window.opener) {
-        window.opener.setTimeout(function() {
+exports.handle = function () {
+  try {
+    if ((window.opener && window.opener.EP) || (window.top && window.top.EP)) {
+      var id = getDialogFromWindow(window);
+      if (id) {
+        var ios = (navigator.userAgent.match(/OS 5(_\d)+ like Mac OS X/i));
+        if (ios) {
           window.opener.EP.Dialog.handleReturn(window);
-        }, 1);
-      } else if(window.top) {
-        window.top.setTimeout(function() {
-          window.top.EP.Dialog.handleReturn(window);
-        }, 1);
+        } else if (window.opener) {
+          window.opener.setTimeout(function () {
+            window.opener.EP.Dialog.handleReturn(window);
+          }, 1);
+        } else if (window.top) {
+          window.top.setTimeout(function () {
+            window.top.EP.Dialog.handleReturn(window);
+          }, 1);
+        }
       }
     }
+  } catch (_) {
   }
 }
 
