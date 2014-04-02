@@ -1,6 +1,6 @@
 {
   "name": "everyplay-js",
-  "version": "0.0.2x",
+  "version": "0.0.2",
   "description": "Everyplay node.js and browser javascript SDK",
   "keywords": [
     "http",
@@ -17,16 +17,16 @@
     "qs": "0.5.2",
     "formidable": "1.0.9",
     "mime": "1.2.5",
-    "component": "*",
     "emitter-component": "0.0.6",
     "methods": "0.0.1",
     "cookiejar": "1.3.0",
-    "uglify-js": "*"
+    "component": "~1.0.0-rc1"
   },
   "devDependencies": {
     "express": "3.0.3",
     "should": "*",
-    "mocha": "*"
+    "mocha": "*",
+    "uglify-js": "~2.4.13"
   },
   "component": {
     "scripts": {
